@@ -9,41 +9,85 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="20dp">
 
-        <LinearLayout
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="Products"
+            android:textColor="@color/text_primary"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- Search Bar -->
+        <EditText
+            android:id="@+id/etProductsSearch"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:autofillHints="name"
+            android:background="@drawable/bg_search"
+            android:hint="Search products..."
+            android:inputType="text"
+            android:paddingHorizontal="16dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <!-- Category Chips -->
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="16dp"
+            android:scrollbars="none">
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Products Management"
-                android:textColor="@color/text_primary"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btnInventoryNav"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Inventory"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:textSize="12sp" />
+                android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/btnManagePricesNav"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Prices"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:textSize="12sp" />
-        </LinearLayout>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipAll"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:checked="true"
+                    android:text="All" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipDog"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="Dog" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipCat"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="Cat" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBird"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="Bird" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFish"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Fish" />
+            </LinearLayout>
+        </HorizontalScrollView>
 
         <TextView
             android:id="@+id/tvNoProducts"
@@ -52,7 +96,7 @@
             android:gravity="center"
             android:text="No products available"
             android:textColor="@color/text_secondary"
-            android:textSize="16sp"
+            android:textSize="15sp"
             android:visibility="gone" />
 
         <androidx.recyclerview.widget.RecyclerView
@@ -72,7 +116,7 @@
         android:layout_margin="24dp"
         android:contentDescription="Add Product"
         android:src="@android:drawable/ic_input_add"
-        app:tint="@color/white"
-        app:backgroundTint="@color/primary" />
+        app:backgroundTint="@color/primary"
+        app:tint="@color/white" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

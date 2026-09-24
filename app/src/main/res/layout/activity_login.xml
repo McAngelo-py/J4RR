@@ -40,6 +40,7 @@
             android:textSize="14sp" />
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilUsername"
             style="@style/Widget.Material3.TextInputLayout.FilledBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -49,9 +50,9 @@
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusTopEnd="12dp"
             app:boxCornerRadiusTopStart="12dp"
+            app:boxStrokeColor="@color/primary"
             app:boxStrokeWidth="0dp"
             app:boxStrokeWidthFocused="1.5dp"
-            app:boxStrokeColor="@color/primary"
             app:hintTextColor="@color/primary">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -66,6 +67,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPassword"
             style="@style/Widget.Material3.TextInputLayout.FilledBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -75,9 +77,9 @@
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusTopEnd="12dp"
             app:boxCornerRadiusTopStart="12dp"
+            app:boxStrokeColor="@color/primary"
             app:boxStrokeWidth="0dp"
             app:boxStrokeWidthFocused="1.5dp"
-            app:boxStrokeColor="@color/primary"
             app:endIconMode="password_toggle"
             app:endIconTint="@color/text_secondary"
             app:hintTextColor="@color/primary">

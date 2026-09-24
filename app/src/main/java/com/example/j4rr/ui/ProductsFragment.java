@@ -2,10 +2,12 @@ package com.example.j4rr.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,13 +18,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.j4rr.AddProductActivity;
-import com.example.j4rr.InventoryActivity;
-import com.example.j4rr.ManagePricesActivity;
 import com.example.j4rr.R;
 import com.example.j4rr.data.LocalStorageManager;
 import com.example.j4rr.model.Product;
+import com.google.android.material.chip.Chip;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ProductsFragment extends Fragment implements ProductAdapter.OnProductListener {
@@ -30,8 +32,10 @@ public class ProductsFragment extends Fragment implements ProductAdapter.OnProdu
     private LocalStorageManager storageManager;
     private RecyclerView recyclerView;
     private TextView tvNoProducts;
-    private ProductAdapter adapter;
-    private List<Product> productList;
+    private List<Product> allProducts = new ArrayList<>();
+    private List<Product> filteredProducts = new ArrayList<>();
+    private EditText etSearch;
+    private String selectedCategory = "All";
 
     @Nullable
     @Override
@@ -41,13 +45,14 @@ public class ProductsFragment extends Fragment implements ProductAdapter.OnProdu
         storageManager = new LocalStorageManager(requireContext());
         recyclerView = view.findViewById(R.id.recyclerViewProducts);
         tvNoProducts = view.findViewById(R.id.tvNoProducts);
+        etSearch = view.findViewById(R.id.etProductsSearch);
         FloatingActionButton fabAdd = view.findViewById(R.id.fabAddProduct);
 
-        Button btnInventoryNav = view.findViewById(R.id.btnInventoryNav);
-        Button btnManagePricesNav = view.findViewById(R.id.btnManagePricesNav);
-
-        btnInventoryNav.setOnClickListener(v -> startActivity(new Intent(requireContext(), InventoryActivity.class)));
-        btnManagePricesNav.setOnClickListener(v -> startActivity(new Intent(requireContext(), ManagePricesActivity.class)));
+        Chip chipAll = view.findViewById(R.id.chipAll);
+        Chip chipDog = view.findViewById(R.id.chipDog);
+        Chip chipCat = view.findViewById(R.id.chipCat);
+        Chip chipBird = view.findViewById(R.id.chipBird);
+        Chip chipFish = view.findViewById(R.id.chipFish);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
 
@@ -55,6 +60,41 @@ public class ProductsFragment extends Fragment implements ProductAdapter.OnProdu
             Intent intent = new Intent(requireContext(), AddProductActivity.class);
             startActivity(intent);
         });
+
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterProducts();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        View.OnClickListener chipListener = v -> {
+            chipAll.setChecked(v.getId() == R.id.chipAll);
+            chipDog.setChecked(v.getId() == R.id.chipDog);
+            chipCat.setChecked(v.getId() == R.id.chipCat);
+            chipBird.setChecked(v.getId() == R.id.chipBird);
+            chipFish.setChecked(v.getId() == R.id.chipFish);
+
+            if (v.getId() == R.id.chipAll) selectedCategory = "All";
+            else if (v.getId() == R.id.chipDog) selectedCategory = "Dog";
+            else if (v.getId() == R.id.chipCat) selectedCategory = "Cat";
+            else if (v.getId() == R.id.chipBird) selectedCategory = "Bird";
+            else if (v.getId() == R.id.chipFish) selectedCategory = "Fish";
+
+            filterProducts();
+        };
+
+        chipAll.setOnClickListener(chipListener);
+        chipDog.setOnClickListener(chipListener);
+        chipCat.setOnClickListener(chipListener);
+        chipBird.setOnClickListener(chipListener);
+        chipFish.setOnClickListener(chipListener);
 
         loadProducts();
 
@@ -68,14 +108,30 @@ public class ProductsFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
     private void loadProducts() {
-        productList = storageManager.getProducts();
-        if (productList.isEmpty()) {
+        allProducts = storageManager.getProducts();
+        filterProducts();
+    }
+
+    private void filterProducts() {
+        String query = etSearch.getText() != null ? etSearch.getText().toString().trim().toLowerCase() : "";
+        filteredProducts.clear();
+
+        for (Product p : allProducts) {
+            boolean matchesSearch = p.getName().toLowerCase().contains(query) || p.getCategory().toLowerCase().contains(query);
+            boolean matchesCategory = selectedCategory.equals("All") || p.getCategory().equalsIgnoreCase(selectedCategory);
+
+            if (matchesSearch && matchesCategory) {
+                filteredProducts.add(p);
+            }
+        }
+
+        if (filteredProducts.isEmpty()) {
             tvNoProducts.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
         } else {
             tvNoProducts.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
-            adapter = new ProductAdapter(productList, this);
+            ProductAdapter adapter = new ProductAdapter(filteredProducts, this);
             recyclerView.setAdapter(adapter);
         }
     }
@@ -89,8 +145,8 @@ public class ProductsFragment extends Fragment implements ProductAdapter.OnProdu
 
     @Override
     public void onDelete(Product product) {
-        productList.remove(product);
-        storageManager.saveProducts(productList);
+        allProducts.remove(product);
+        storageManager.saveProducts(allProducts);
         loadProducts();
         Toast.makeText(requireContext(), "Product deleted", Toast.LENGTH_SHORT).show();
     }

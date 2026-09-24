@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.example.j4rr.AddProductActivity;
 import com.example.j4rr.InventoryActivity;
 import com.example.j4rr.MainActivity;
 import com.example.j4rr.R;
@@ -24,7 +25,7 @@ import java.util.Locale;
 
 public class DashboardFragment extends Fragment {
 
-    private TextView tvSales, tvProducts, tvLowStock, tvTransactions;
+    private TextView tvSales, tvProducts, tvLowStock, tvTxnCount, tvRecentSales;
     private LocalStorageManager storageManager;
 
     @Nullable
@@ -37,10 +38,11 @@ public class DashboardFragment extends Fragment {
         tvSales = view.findViewById(R.id.tvDashboardSales);
         tvProducts = view.findViewById(R.id.tvDashboardProducts);
         tvLowStock = view.findViewById(R.id.tvDashboardLowStock);
-        tvTransactions = view.findViewById(R.id.tvDashboardTransactions);
+        tvTxnCount = view.findViewById(R.id.tvDashboardTxnCount);
+        tvRecentSales = view.findViewById(R.id.tvRecentSalesEmpty);
 
         Button btnNewSale = view.findViewById(R.id.btnQuickNewSale);
-        Button btnProducts = view.findViewById(R.id.btnQuickProducts);
+        Button btnAddProduct = view.findViewById(R.id.btnQuickAddProduct);
         Button btnInventory = view.findViewById(R.id.btnQuickInventory);
         Button btnSales = view.findViewById(R.id.btnQuickSales);
 
@@ -50,10 +52,8 @@ public class DashboardFragment extends Fragment {
             }
         });
 
-        btnProducts.setOnClickListener(v -> {
-            if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).navigateToTab(R.id.nav_products);
-            }
+        btnAddProduct.setOnClickListener(v -> {
+            startActivity(new Intent(requireContext(), AddProductActivity.class));
         });
 
         btnInventory.setOnClickListener(v -> {
@@ -95,7 +95,15 @@ public class DashboardFragment extends Fragment {
 
         tvSales.setText(String.format(Locale.getDefault(), "₱%.2f", totalSalesAmount));
         tvProducts.setText(String.valueOf(products.size()));
-        tvLowStock.setText(String.valueOf(lowStockCount));
-        tvTransactions.setText(String.valueOf(sales.size()));
+        tvTxnCount.setText(sales.size() + (sales.size() == 1 ? " transaction" : " transactions"));
+        tvLowStock.setText(lowStockCount + (lowStockCount == 1 ? " item low on stock" : " items low on stock"));
+
+        if (!sales.isEmpty()) {
+            Sale latest = sales.get(sales.size() - 1);
+            tvRecentSales.setText(String.format(Locale.getDefault(), "Latest: %s\nItems: %s\nTotal: ₱%.2f",
+                    latest.getTransactionNumber(), latest.getItemsSummary(), latest.getTotal()));
+        } else {
+            tvRecentSales.setText("No sales yet\n\nYour completed transactions will appear here.");
+        }
     }
 }

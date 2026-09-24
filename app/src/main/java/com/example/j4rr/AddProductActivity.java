@@ -9,20 +9,23 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.example.j4rr.data.LocalStorageManager;
 import com.example.j4rr.model.Product;
+import com.example.j4rr.util.AppUtils;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class AddProductActivity extends AppCompatActivity {
 
+    private TextInputLayout tilName, tilPrice, tilStock, tilMinStock, tilCategory;
     private TextInputEditText etName, etPrice, etStock, etMinStock;
     private AutoCompleteTextView actvCategory;
+    private Button btnSave;
     private LocalStorageManager storageManager;
     private String editingProductId = null;
 
@@ -30,25 +33,24 @@ public class AddProductActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Auto-hide system bars (immersive mode)
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        WindowInsetsControllerCompat windowInsetsController =
-                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
-        windowInsetsController.setSystemBarsBehavior(
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-
         setContentView(R.layout.activity_add_product);
 
         storageManager = new LocalStorageManager(this);
 
         TextView tvTitle = findViewById(R.id.tvAddProductTitle);
+        tilName = findViewById(R.id.tilProductName);
+        tilCategory = findViewById(R.id.tilProductCategory);
+        tilPrice = findViewById(R.id.tilProductPrice);
+        tilStock = findViewById(R.id.tilProductStock);
+        tilMinStock = findViewById(R.id.tilProductMinStock);
+
         etName = findViewById(R.id.etProductName);
         actvCategory = findViewById(R.id.actvCategory);
         etPrice = findViewById(R.id.etProductPrice);
         etStock = findViewById(R.id.etProductStock);
         etMinStock = findViewById(R.id.etProductMinStock);
-        Button btnSave = findViewById(R.id.btnSaveProduct);
+        btnSave = findViewById(R.id.btnSaveProduct);
 
         String[] categories = new String[]{"Dog", "Cat", "Bird", "Fish", "Other"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, categories);
@@ -79,33 +81,91 @@ public class AddProductActivity extends AppCompatActivity {
     }
 
     private void saveProduct() {
+        if (tilName != null) tilName.setError(null);
+        if (tilCategory != null) tilCategory.setError(null);
+        if (tilPrice != null) tilPrice.setError(null);
+        if (tilStock != null) tilStock.setError(null);
+        if (tilMinStock != null) tilMinStock.setError(null);
+
         String name = etName.getText() != null ? etName.getText().toString().trim() : "";
         String category = actvCategory.getText() != null ? actvCategory.getText().toString().trim() : "";
         String priceStr = etPrice.getText() != null ? etPrice.getText().toString().trim() : "";
         String stockStr = etStock.getText() != null ? etStock.getText().toString().trim() : "";
         String minStockStr = etMinStock.getText() != null ? etMinStock.getText().toString().trim() : "";
 
-        if (name.isEmpty() || category.isEmpty() || priceStr.isEmpty() || stockStr.isEmpty() || minStockStr.isEmpty()) {
-            Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
-            return;
+        boolean hasError = false;
+
+        if (AppUtils.isEmpty(name)) {
+            if (tilName != null) tilName.setError("Product name is required.");
+            hasError = true;
         }
 
-        double price;
-        int stock, minStock;
-        try {
-            price = Double.parseDouble(priceStr);
-            stock = Integer.parseInt(stockStr);
-            minStock = Integer.parseInt(minStockStr);
-        } catch (NumberFormatException e) {
-            Toast.makeText(this, "Invalid number format", Toast.LENGTH_SHORT).show();
-            return;
+        if (AppUtils.isEmpty(category)) {
+            if (tilCategory != null) tilCategory.setError("Please select a category.");
+            hasError = true;
         }
+
+        double price = 0.0;
+        if (AppUtils.isEmpty(priceStr)) {
+            if (tilPrice != null) tilPrice.setError("Price is required.");
+            hasError = true;
+        } else {
+            try {
+                price = Double.parseDouble(priceStr);
+                if (price <= 0) {
+                    if (tilPrice != null) tilPrice.setError("Price must be greater than ₱0.");
+                    hasError = true;
+                }
+            } catch (NumberFormatException e) {
+                if (tilPrice != null) tilPrice.setError("Enter a valid price.");
+                hasError = true;
+            }
+        }
+
+        int stock = 0;
+        if (AppUtils.isEmpty(stockStr)) {
+            if (tilStock != null) tilStock.setError("Stock quantity is required.");
+            hasError = true;
+        } else {
+            try {
+                stock = Integer.parseInt(stockStr);
+                if (stock < 0) {
+                    if (tilStock != null) tilStock.setError("Stock cannot be negative.");
+                    hasError = true;
+                }
+            } catch (NumberFormatException e) {
+                if (tilStock != null) tilStock.setError("Enter a valid stock quantity.");
+                hasError = true;
+            }
+        }
+
+        int minStock = 5;
+        if (AppUtils.isEmpty(minStockStr)) {
+            if (tilMinStock != null) tilMinStock.setError("Minimum stock is required.");
+            hasError = true;
+        } else {
+            try {
+                minStock = Integer.parseInt(minStockStr);
+                if (minStock < 0) {
+                    if (tilMinStock != null) tilMinStock.setError("Minimum stock cannot be negative.");
+                    hasError = true;
+                }
+            } catch (NumberFormatException e) {
+                if (tilMinStock != null) tilMinStock.setError("Enter a valid minimum stock quantity.");
+                hasError = true;
+            }
+        }
+
+        if (hasError) return;
+
+        // Prevent double clicks
+        btnSave.setEnabled(false);
 
         List<Product> products = storageManager.getProducts();
-
-        if (products == null) return;
+        if (products == null) products = new ArrayList<>();
 
         if (editingProductId != null) {
+            boolean updated = false;
             for (Product p : products) {
                 if (p.getId().equals(editingProductId)) {
                     p.setName(name);
@@ -113,18 +173,25 @@ public class AddProductActivity extends AppCompatActivity {
                     p.setPrice(price);
                     p.setStock(stock);
                     p.setMinStock(minStock);
+                    updated = true;
                     break;
                 }
             }
-            Toast.makeText(this, "Product Updated", Toast.LENGTH_SHORT).show();
+            if (updated) {
+                storageManager.saveProducts(products);
+                Toast.makeText(this, "Product updated successfully.", Toast.LENGTH_SHORT).show();
+                finish();
+            } else {
+                btnSave.setEnabled(true);
+                Toast.makeText(this, "Unable to update product. Please try again.", Toast.LENGTH_SHORT).show();
+            }
         } else {
             String id = UUID.randomUUID().toString();
             Product newProduct = new Product(id, name, category, price, stock, minStock);
             products.add(newProduct);
-            Toast.makeText(this, "Product Saved", Toast.LENGTH_SHORT).show();
+            storageManager.saveProducts(products);
+            Toast.makeText(this, "Product added successfully.", Toast.LENGTH_SHORT).show();
+            finish();
         }
-
-        storageManager.saveProducts(products);
-        finish();
     }
 }

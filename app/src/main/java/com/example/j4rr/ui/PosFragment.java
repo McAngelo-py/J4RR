@@ -22,6 +22,11 @@ import com.example.j4rr.data.LocalStorageManager;
 import com.example.j4rr.model.CartItem;
 import com.example.j4rr.model.Product;
 import com.example.j4rr.model.Sale;
+import com.example.j4rr.util.AppUtils;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -32,17 +37,25 @@ import java.util.Locale;
 public class PosFragment extends Fragment implements PosProductAdapter.OnPosProductListener, CartAdapter.OnCartListener {
 
     private LocalStorageManager storageManager;
-    private RecyclerView rvProducts, rvCart;
-    private TextView tvNoProducts, tvCartEmpty, tvSubtotal, tvDiscount, tvTotal, tvChange;
-    private EditText etSearch, etCash;
-    private Button btnCompleteSale;
+    private RecyclerView rvProducts;
+    private TextView tvNoProducts;
+    private EditText etSearch;
+    private ExtendedFloatingActionButton fabCart;
 
     private List<Product> allProducts = new ArrayList<>();
-    private List<Product> filteredProducts = new ArrayList<>();
-    private List<CartItem> cartItems = new ArrayList<>();
+    private final List<Product> filteredProducts = new ArrayList<>();
+    private final List<CartItem> cartItems = new ArrayList<>();
 
     private PosProductAdapter productAdapter;
-    private CartAdapter cartAdapter;
+    private BottomSheetDialog cartDialog;
+    private String selectedCategory = "All";
+
+    // Cart dialog views
+    private TextView tvCartEmpty, tvSubtotal, tvDiscount, tvTotal, tvChange;
+    private TextInputLayout tilPosCash;
+    private EditText etCash;
+    private RecyclerView rvCart;
+    private Button btnCompleteSale;
 
     @Nullable
     @Override
@@ -53,18 +66,16 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
 
         etSearch = view.findViewById(R.id.etPosSearch);
         rvProducts = view.findViewById(R.id.recyclerViewPosProducts);
-        rvCart = view.findViewById(R.id.recyclerViewCart);
         tvNoProducts = view.findViewById(R.id.tvPosNoProducts);
-        tvCartEmpty = view.findViewById(R.id.tvCartEmpty);
-        tvSubtotal = view.findViewById(R.id.tvPosSubtotal);
-        tvDiscount = view.findViewById(R.id.tvPosDiscount);
-        tvTotal = view.findViewById(R.id.tvPosTotal);
-        etCash = view.findViewById(R.id.etPosCash);
-        tvChange = view.findViewById(R.id.tvPosChange);
-        btnCompleteSale = view.findViewById(R.id.btnCompleteSale);
+        fabCart = view.findViewById(R.id.fabCart);
 
-        rvProducts.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-        rvCart.setLayoutManager(new LinearLayoutManager(requireContext()));
+        Chip chipAll = view.findViewById(R.id.chipPosAll);
+        Chip chipDog = view.findViewById(R.id.chipPosDog);
+        Chip chipCat = view.findViewById(R.id.chipPosCat);
+        Chip chipBird = view.findViewById(R.id.chipPosBird);
+        Chip chipFish = view.findViewById(R.id.chipPosFish);
+
+        rvProducts.setLayoutManager(new LinearLayoutManager(requireContext()));
 
         loadProducts();
 
@@ -74,55 +85,60 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterProducts(s.toString());
+                filterProducts();
             }
 
             @Override
             public void afterTextChanged(Editable s) {}
         });
 
-        etCash.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+        View.OnClickListener chipListener = v -> {
+            chipAll.setChecked(v.getId() == R.id.chipPosAll);
+            chipDog.setChecked(v.getId() == R.id.chipPosDog);
+            chipCat.setChecked(v.getId() == R.id.chipPosCat);
+            chipBird.setChecked(v.getId() == R.id.chipPosBird);
+            chipFish.setChecked(v.getId() == R.id.chipPosFish);
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                calculateChange();
-            }
+            if (v.getId() == R.id.chipPosAll) selectedCategory = "All";
+            else if (v.getId() == R.id.chipPosDog) selectedCategory = "Dog";
+            else if (v.getId() == R.id.chipPosCat) selectedCategory = "Cat";
+            else if (v.getId() == R.id.chipPosBird) selectedCategory = "Bird";
+            else if (v.getId() == R.id.chipPosFish) selectedCategory = "Fish";
 
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
+            filterProducts();
+        };
 
-        btnCompleteSale.setOnClickListener(v -> completeSale());
+        chipAll.setOnClickListener(chipListener);
+        chipDog.setOnClickListener(chipListener);
+        chipCat.setOnClickListener(chipListener);
+        chipBird.setOnClickListener(chipListener);
+        chipFish.setOnClickListener(chipListener);
 
-        updateCartUI();
+        fabCart.setOnClickListener(v -> showCartDialog());
+
+        updateCartButtonBadge();
 
         return view;
     }
 
     private void loadProducts() {
         allProducts = storageManager.getProducts();
-        filteredProducts = new ArrayList<>(allProducts);
-        if (filteredProducts.isEmpty()) {
-            tvNoProducts.setVisibility(View.VISIBLE);
-            rvProducts.setVisibility(View.GONE);
-        } else {
-            tvNoProducts.setVisibility(View.GONE);
-            rvProducts.setVisibility(View.VISIBLE);
-            productAdapter = new PosProductAdapter(filteredProducts, this);
-            rvProducts.setAdapter(productAdapter);
-        }
+        filterProducts();
     }
 
-    private void filterProducts(String query) {
+    private void filterProducts() {
+        String query = etSearch.getText() != null ? etSearch.getText().toString().trim().toLowerCase() : "";
         filteredProducts.clear();
+
         for (Product p : allProducts) {
-            if (p.getName().toLowerCase().contains(query.toLowerCase()) ||
-                    p.getCategory().toLowerCase().contains(query.toLowerCase())) {
+            boolean matchesSearch = p.getName().toLowerCase().contains(query) || p.getCategory().toLowerCase().contains(query);
+            boolean matchesCategory = selectedCategory.equals("All") || p.getCategory().equalsIgnoreCase(selectedCategory);
+
+            if (matchesSearch && matchesCategory) {
                 filteredProducts.add(p);
             }
         }
+
         if (filteredProducts.isEmpty()) {
             tvNoProducts.setVisibility(View.VISIBLE);
             rvProducts.setVisibility(View.GONE);
@@ -137,7 +153,7 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
     @Override
     public void onAddToCart(Product product) {
         if (product.getStock() <= 0) {
-            Toast.makeText(requireContext(), "Product is out of stock", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "This product is out of stock.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -153,22 +169,27 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
             if (existing.getQuantity() < product.getStock()) {
                 existing.setQuantity(existing.getQuantity() + 1);
             } else {
-                Toast.makeText(requireContext(), "Reached available stock limit", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Only " + product.getStock() + " units are available.", Toast.LENGTH_SHORT).show();
             }
         } else {
             cartItems.add(new CartItem(product, 1));
         }
 
-        updateCartUI();
+        updateCartButtonBadge();
+        if (cartDialog != null && cartDialog.isShowing()) {
+            updateCartDialogUI();
+        }
+        Toast.makeText(requireContext(), "Added to cart", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onIncrease(CartItem item) {
         if (item.getQuantity() < item.getProduct().getStock()) {
             item.setQuantity(item.getQuantity() + 1);
-            updateCartUI();
+            updateCartButtonBadge();
+            updateCartDialogUI();
         } else {
-            Toast.makeText(requireContext(), "Reached available stock limit", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Only " + item.getProduct().getStock() + " units are available.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -179,23 +200,70 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
         } else {
             cartItems.remove(item);
         }
-        updateCartUI();
+        updateCartButtonBadge();
+        updateCartDialogUI();
     }
 
     @Override
     public void onRemove(CartItem item) {
         cartItems.remove(item);
-        updateCartUI();
+        updateCartButtonBadge();
+        updateCartDialogUI();
     }
 
-    private void updateCartUI() {
+    private void updateCartButtonBadge() {
+        int totalQty = 0;
+        for (CartItem item : cartItems) {
+            totalQty += item.getQuantity();
+        }
+        fabCart.setText("🛒 Cart (" + totalQty + ")");
+    }
+
+    private void showCartDialog() {
+        cartDialog = new BottomSheetDialog(requireContext());
+        View sheetView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_cart, null, false);
+        cartDialog.setContentView(sheetView);
+
+        tvCartEmpty = sheetView.findViewById(R.id.tvCartEmpty);
+        rvCart = sheetView.findViewById(R.id.recyclerViewCart);
+        tvSubtotal = sheetView.findViewById(R.id.tvPosSubtotal);
+        tvDiscount = sheetView.findViewById(R.id.tvPosDiscount);
+        tvTotal = sheetView.findViewById(R.id.tvPosTotal);
+        tilPosCash = sheetView.findViewById(R.id.tilPosCash);
+        etCash = sheetView.findViewById(R.id.etPosCash);
+        tvChange = sheetView.findViewById(R.id.tvPosChange);
+        btnCompleteSale = sheetView.findViewById(R.id.btnCompleteSale);
+
+        rvCart.setLayoutManager(new LinearLayoutManager(requireContext()));
+
+        etCash.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (tilPosCash != null) tilPosCash.setError(null);
+                calculateChange();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        btnCompleteSale.setOnClickListener(v -> completeSale());
+
+        updateCartDialogUI();
+        cartDialog.show();
+    }
+
+    private void updateCartDialogUI() {
         if (cartItems.isEmpty()) {
             tvCartEmpty.setVisibility(View.VISIBLE);
             rvCart.setVisibility(View.GONE);
         } else {
             tvCartEmpty.setVisibility(View.GONE);
             rvCart.setVisibility(View.VISIBLE);
-            cartAdapter = new CartAdapter(cartItems, this);
+            CartAdapter cartAdapter = new CartAdapter(cartItems, this);
             rvCart.setAdapter(cartAdapter);
         }
 
@@ -204,16 +272,17 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
             subtotal += item.getSubtotal();
         }
 
-        double discount = 0.0; // No discount for prototype
+        double discount = 0.0;
         double total = subtotal - discount;
 
-        tvSubtotal.setText(String.format(Locale.getDefault(), "₱%.2f", subtotal));
-        tvDiscount.setText(String.format(Locale.getDefault(), "₱%.2f", discount));
-        tvTotal.setText(String.format(Locale.getDefault(), "₱%.2f", total));
+        if (tvSubtotal != null) tvSubtotal.setText(AppUtils.formatCurrency(subtotal));
+        if (tvDiscount != null) tvDiscount.setText(AppUtils.formatCurrency(discount));
+        if (tvTotal != null) tvTotal.setText(AppUtils.formatCurrency(total));
         calculateChange();
     }
 
     private void calculateChange() {
+        if (tvChange == null || etCash == null) return;
         double total = getCartTotal();
         String cashStr = etCash.getText() != null ? etCash.getText().toString().trim() : "";
         if (!cashStr.isEmpty()) {
@@ -221,7 +290,7 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
                 double cash = Double.parseDouble(cashStr);
                 double change = cash - total;
                 if (change >= 0) {
-                    tvChange.setText(String.format(Locale.getDefault(), "₱%.2f", change));
+                    tvChange.setText(AppUtils.formatCurrency(change));
                 } else {
                     tvChange.setText("₱0.00 (Insufficient)");
                 }
@@ -242,14 +311,20 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
     }
 
     private void completeSale() {
+        if (tilPosCash != null) tilPosCash.setError(null);
+
         if (cartItems.isEmpty()) {
-            Toast.makeText(requireContext(), "Cart is empty", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Your cart is empty. Add at least one product before completing the sale.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         String cashStr = etCash.getText() != null ? etCash.getText().toString().trim() : "";
-        if (cashStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Please enter cash amount", Toast.LENGTH_SHORT).show();
+        if (AppUtils.isEmpty(cashStr)) {
+            if (tilPosCash != null) {
+                tilPosCash.setError("Enter a valid cash amount.");
+            } else {
+                etCash.setError("Enter a valid cash amount.");
+            }
             return;
         }
 
@@ -257,26 +332,51 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
         double cash;
         try {
             cash = Double.parseDouble(cashStr);
+            if (cash < 0) {
+                if (tilPosCash != null) tilPosCash.setError("Enter a valid cash amount.");
+                return;
+            }
         } catch (NumberFormatException e) {
-            Toast.makeText(requireContext(), "Invalid cash amount", Toast.LENGTH_SHORT).show();
+            if (tilPosCash != null) {
+                tilPosCash.setError("Enter a valid cash amount.");
+            } else {
+                etCash.setError("Enter a valid cash amount.");
+            }
             return;
         }
 
         if (cash < total) {
-            Toast.makeText(requireContext(), "Insufficient cash", Toast.LENGTH_SHORT).show();
+            double remaining = total - cash;
+            String errMsg = "Insufficient payment. Remaining amount: " + AppUtils.formatCurrency(remaining);
+            if (tilPosCash != null) {
+                tilPosCash.setError(errMsg);
+            } else {
+                etCash.setError(errMsg);
+            }
+            Toast.makeText(requireContext(), errMsg, Toast.LENGTH_SHORT).show();
             return;
         }
 
         double change = cash - total;
 
-        // Build items summary
+        // Verify stock sufficiency for all cart items before completing sale
+        for (CartItem ci : cartItems) {
+            for (Product p : allProducts) {
+                if (p.getId().equals(ci.getProduct().getId())) {
+                    if (p.getStock() < ci.getQuantity()) {
+                        Toast.makeText(requireContext(), "Insufficient stock for " + p.getName() + ". Available: " + p.getStock(), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                }
+            }
+        }
+
         StringBuilder summary = new StringBuilder();
         for (int i = 0; i < cartItems.size(); i++) {
             CartItem ci = cartItems.get(i);
             summary.append(ci.getProduct().getName()).append(" (x").append(ci.getQuantity()).append(")");
             if (i < cartItems.size() - 1) summary.append(", ");
 
-            // Update product stock in storage
             for (Product p : allProducts) {
                 if (p.getId().equals(ci.getProduct().getId())) {
                     p.setStock(p.getStock() - ci.getQuantity());
@@ -296,12 +396,13 @@ public class PosFragment extends Fragment implements PosProductAdapter.OnPosProd
         sales.add(sale);
         storageManager.saveSales(sales);
 
-        Toast.makeText(requireContext(), "Sale Completed! Change: ₱" + String.format(Locale.getDefault(), "%.2f", change), Toast.LENGTH_LONG).show();
+        Toast.makeText(requireContext(), "Sale completed successfully! Change: " + AppUtils.formatCurrency(change), Toast.LENGTH_LONG).show();
 
-        // Clear cart and cash
         cartItems.clear();
-        etCash.setText("");
-        updateCartUI();
+        updateCartButtonBadge();
+        if (cartDialog != null) {
+            cartDialog.dismiss();
+        }
         loadProducts();
     }
 }

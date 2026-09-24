@@ -40,8 +40,16 @@ public class PosProductAdapter extends RecyclerView.Adapter<PosProductAdapter.Po
     public void onBindViewHolder(@NonNull PosViewHolder holder, int position) {
         Product product = productList.get(position);
         holder.tvName.setText(product.getName());
+        holder.tvCategory.setText(product.getCategory());
         holder.tvPrice.setText(String.format(Locale.getDefault(), "₱%.2f", product.getPrice()));
-        holder.tvStock.setText("Stock: " + product.getStock());
+
+        String emoji = "🐾";
+        String cat = product.getCategory().toLowerCase();
+        if (cat.contains("dog")) emoji = "🐶";
+        else if (cat.contains("cat")) emoji = "🐱";
+        else if (cat.contains("bird")) emoji = "🐦";
+        else if (cat.contains("fish")) emoji = "🐠";
+        holder.tvEmoji.setText(emoji);
 
         holder.btnAdd.setOnClickListener(v -> {
             if (listener != null) listener.onAddToCart(product);
@@ -54,14 +62,15 @@ public class PosProductAdapter extends RecyclerView.Adapter<PosProductAdapter.Po
     }
 
     static class PosViewHolder extends RecyclerView.ViewHolder {
-        TextView tvName, tvPrice, tvStock;
+        TextView tvName, tvCategory, tvPrice, tvEmoji;
         Button btnAdd;
 
         public PosViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tvPosProductName);
+            tvCategory = itemView.findViewById(R.id.tvPosProductCategory);
             tvPrice = itemView.findViewById(R.id.tvPosProductPrice);
-            tvStock = itemView.findViewById(R.id.tvPosProductStock);
+            tvEmoji = itemView.findViewById(R.id.tvPosEmoji);
             btnAdd = itemView.findViewById(R.id.btnAddToCart);
         }
     }

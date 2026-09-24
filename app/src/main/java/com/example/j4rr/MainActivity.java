@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
         bottomNav.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
             int itemId = item.getItemId();
-            if (itemId == R.id.nav_dashboard) {
+            if (itemId == R.id.nav_home) {
                 selectedFragment = new DashboardFragment();
             } else if (itemId == R.id.nav_pos) {
                 selectedFragment = new PosFragment();
@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
                 selectedFragment = new ProductsFragment();
             } else if (itemId == R.id.nav_sales) {
                 selectedFragment = new SalesFragment();
-            } else if (itemId == R.id.nav_settings) {
+            } else if (itemId == R.id.nav_more) {
                 selectedFragment = new SettingsFragment();
             }
 
